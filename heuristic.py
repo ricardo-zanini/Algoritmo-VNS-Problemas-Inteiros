@@ -27,18 +27,17 @@ def create_initial_solution(bottle_number, bottle_lower_bounds, bottle_upper_bou
 
         balls_count = balls_count + random_number_of_balls
 
-    for bottle in range(int(bottle_number)):
-        number_balls_add = bottle_upper_bounds[bottle] - initial_solution[bottle]
+    while balls_count < balls_number:
+        for bottle in range(int(bottle_number)):
+            number_balls_add = bottle_upper_bounds[bottle] - initial_solution[bottle]
 
-        if(number_balls_add > (balls_number - balls_count)):
-            number_balls_add = balls_number - balls_count
-        
-        initial_solution[bottle] = initial_solution[bottle] + number_balls_add
+            if(number_balls_add > (balls_number - balls_count)):
+                number_balls_add = balls_number - balls_count
 
-        balls_count = balls_count + number_balls_add
+            rand_balls_add = randint(0, number_balls_add)
+            initial_solution[bottle] = initial_solution[bottle] + rand_balls_add
 
-        if(balls_count == balls_number):
-            break
+            balls_count = balls_count + rand_balls_add
     return initial_solution
 
 # =================== Verificação de qual critério de parada foi selecionado e para com base nele ===================
@@ -62,34 +61,36 @@ def neighborhood(solution, k, bottle_lower_bounds, bottle_upper_bounds):
     
     # Gerar os índices da lista
     indexes = range(len(solution))
-
     
-    # Gerar duas listas de combinações de índices
+    # Gerar lista de combinações de índices
     combinations_1 = list(combinations(indexes, k))
-    combinations_2 = list(combinations(indexes, k))
+    combinations_1_len = len(combinations_1[0])
+
+    # Ultimo elemento de cada combinação em que será retirada uma bola, os elementos seguintes receberão bolas
+    last_comb_get = np.floor(combinations_1_len / 2) - 1
 
     # Começa com vizinhanca vazia
     neighborhood = []
-    for i in combinations_1:                            # faz loop pela primeira lista de combinações de indices (listas que tiram bolas)
-        for j in combinations_2:                        # faz loop pela segunda lista de combinações de indices (listas que adicionam bolas)
-            add = 1                                     # Inicia dizendo que pode adicionar resultado
-            new_neighbor = solution.copy()              # Inicia novo vizinho
-            for comb_1_el in i:                         # Loop por valores nas combinaçoes de L1
-                for comb_2_el in j:                     # Loop por valores nas combinaçoes de L2
-                    if(
-                        comb_1_el == comb_2_el                                           # se algum dos elementos da L1 for igual a L2 significa que estamos tirando e colocando no mesmo pote logo não add
-                        or new_neighbor[comb_1_el] == bottle_lower_bounds[comb_1_el]     # se estiver no limite inferior n pode tirar
-                        or new_neighbor[comb_2_el] == bottle_upper_bounds[comb_2_el]     # se estiver no limite superior n pode colocar
-                    ):                                         
-                        add = 0
-            if add == 1:
-                for comb_1_el in i:  
-                    new_neighbor[comb_1_el] = new_neighbor[comb_1_el] - 1
-                for comb_2_el in j:     
-                    new_neighbor[comb_2_el] = new_neighbor[comb_2_el] + 1
-
-                neighborhood.append(new_neighbor)
-    
+    for i in combinations_1:                            
+        add = 1                                    
+        new_neighbor = solution.copy()             
+        for comb_1_el in range(len(i)):                                         
+            if(comb_1_el <= last_comb_get):                                                     # Se o índice atual <= do que ultimo indice de tirar bolas, então tira bolas
+                value_get = 1
+                if(combinations_1_len % 2 == 1 and comb_1_el == last_comb_get):                 # Se o tamanho da combinação for impar, retira 2 elementos do ultimo get
+                    value_get = 2
+                if(new_neighbor[i[comb_1_el]] - value_get < bottle_lower_bounds[i[comb_1_el]]): # Se ao retirar bolas ferimos o limite inferior, selecao é invalida
+                    add = 0
+                else:
+                    new_neighbor[i[comb_1_el]] = new_neighbor[i[comb_1_el]] - value_get         # Senao retiamos bolas
+            else:                                                                               # Coloca bolas nesses índices
+                if(new_neighbor[i[comb_1_el]] == bottle_upper_bounds[i[comb_1_el]]):            # Se ao adicionarmos bolas ferimos limite superior, seleção é invalida
+                    add = 0
+                else:
+                    new_neighbor[i[comb_1_el]] = new_neighbor[i[comb_1_el]] + 1                 # Senao adicionamos bolas
+        if add == 1:
+            neighborhood.append(new_neighbor)
+                
     return neighborhood
 
 # =================== Gera busca local buscando mínimo local ====================
@@ -107,15 +108,47 @@ def local_search(solution, neighborhood):
             break
     return best_solution
 
-# =================== Objetivo: andar K passos aleatorios numa vizinhanca, gerando perturbacao na solução final ==================
+# =================== Objetivo: andar K passos aleatorios numa vizinhanca, gerando perturbacao na solução ==================
 def shake(solution, k, bottle_lower_bounds, bottle_upper_bounds):
     # Constante de aumento de perturbação
-    c = 10
+    c = 2
     # Deve-se fazer um shake de k passos na vizinhança
-    solution_shake = []
-    for i in range(k * c):
-        solution_shake_list = neighborhood(solution, 1, bottle_lower_bounds, bottle_upper_bounds)
-        solution_shake = solution_shake_list[random.randint(0, len(solution_shake_list) - 1)]
+    solution_shake = solution
+
+    # Gerar os índices da lista
+    indexes = range(len(solution_shake))
+    
+    # Gerar lista de combinações de índices
+    combinations_1 = list(combinations(indexes, k))
+    combinations_1_len = len(combinations_1[0])
+
+    # Ultimo elemento de cada combinação em que será retirada uma bola, os elementos seguintes receberão bolas
+    last_comb_get = np.floor(combinations_1_len / 2) - 1
+
+    count = 0
+
+    while count < c*k:            
+        add = 1                                    
+        new_solution = solution_shake.copy()    
+        i = combinations_1[randint(0, len(combinations_1) - 1)]
+        for comb_1_el in range(len(i)):                                         
+            if(comb_1_el <= last_comb_get):                                                     # Se o índice atual <= do que ultimo indice de tirar bolas, então tira bolas
+                value_get = 1
+                if(combinations_1_len % 2 == 1 and comb_1_el == last_comb_get):                 # Se o tamanho da combinação for impar, retira 2 elementos do ultimo get
+                    value_get = 2
+                if(new_solution[i[comb_1_el]] - value_get < bottle_lower_bounds[i[comb_1_el]]): # Se ao retirar bolas ferimos o limite inferior, selecao é invalida
+                    add = 0
+                else:
+                    new_solution[i[comb_1_el]] = new_solution[i[comb_1_el]] - value_get         # Senao retiamos bolas
+            else:                                                                               # Coloca bolas nesses índices
+                if(new_solution[i[comb_1_el]] == bottle_upper_bounds[i[comb_1_el]]):            # Se ao adicionarmos bolas ferimos limite superior, seleção é invalida
+                    add = 0
+                else:
+                    new_solution[i[comb_1_el]] = new_solution[i[comb_1_el]] + 1                 # Senao adicionamos bolas
+        if add == 1:
+            solution_shake = new_solution
+            count = count + 1
+
     return solution_shake
 
 # ================= Solicitação de dados do usuário ==================
@@ -202,25 +235,25 @@ iteractions_number = 0
 solution = initial_solution
 best_solution = []
 
+m = 3
 while criterion_verify(time_criterion_selected, time_stop_criterion, time_start, interactions_stop_criterion, iteractions_number):
     iteractions_number += 1
-    k = 1
-    m = 2
+    k = 2
     while k <= m:
-        print(k)
-        solution_shaken = shake(solution, k, bottle_lower_bounds, bottle_upper_bounds)
 
-        solution_new = local_search(solution_shaken, neighborhood(solution_shaken, k, bottle_lower_bounds, bottle_upper_bounds))
+        solution_shaken         = shake(solution, k, bottle_lower_bounds, bottle_upper_bounds)
+        neighbors               = neighborhood(solution_shaken, k, bottle_lower_bounds, bottle_upper_bounds)
+        solution_new            = local_search(solution_shaken, neighbors)
 
         if(solution_value(solution_new) <= solution_value(solution)):
             k = k + 1
         else:
             solution = solution_new
-            k = 1
+            k = 2
         if(solution_value(solution) > solution_value(best_solution)):
             best_solution = solution
 
-print("A melhor solução encontrada foi:")
+print("A melhor solução encontrada é:")
 print(best_solution)
 print("O valor da solução encontrada é:")
 print(solution_value(best_solution))
