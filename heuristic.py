@@ -232,7 +232,7 @@ iteractions_number = 0
 
 # =============== EXECUÇÃO DO ALGORITMO VNS ====================
 
-solution = initial_solution
+solution = initial_solution.copy()
 best_solution = []
 
 m = 3
