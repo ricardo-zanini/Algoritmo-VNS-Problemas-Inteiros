@@ -1,0 +1,28 @@
+neighbors = []
+
+    if(k == 1):
+        for i in range(len(solution)):
+            if solution[i] == bottle_lower_bounds[i]:
+                continue
+            else:
+                for j in range(len(solution)):
+                    if j != i:
+                        if solution[j] < bottle_upper_bounds[i]:
+                            solution_new = solution
+                            solution_new[i] = solution_new[i] - 1
+                            solution_new[j] = solution_new[j] + 1
+    if(k == 2):
+         for i1 in range(len(solution)):
+            if solution[i1] == bottle_lower_bounds[i1]:
+                continue
+            else:
+                for i2 in range(len(solution)):
+                    if solution[i2] == bottle_lower_bounds[i2] or i1 >= i2:
+                        continue
+                    else:
+                        for j1 in range(len(solution)):
+                            if j1 != i1 and j1 != i2:
+                                if solution[j1] < bottle_upper_bounds[i1]:
+                                    solution_new = solution
+                                    solution_new[i1] = solution_new[i1] - 1
+                                    solution_new[j1] = solution_new[j1] + 1
